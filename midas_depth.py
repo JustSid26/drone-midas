@@ -12,6 +12,20 @@ import torch
 os.environ.setdefault("TORCH_HOME", os.path.join(os.path.dirname(os.path.abspath(__file__)), ".torch"))
 
 
+def _trust_hub_repos():
+    """MiDaS-small pulls its backbone from a second hub repo, and trust_repo=True
+    only covers the first, so a fresh machine stops at a y/N prompt (or crashes
+    without a terminal). Pre-trust both."""
+    hub = torch.hub.get_dir()
+    os.makedirs(hub, exist_ok=True)
+    path = os.path.join(hub, "trusted_list")
+    have = set(open(path).read().split()) if os.path.exists(path) else set()
+    with open(path, "a") as f:
+        for repo in ("intel-isl_MiDaS", "rwightman_gen-efficientnet-pytorch"):
+            if repo not in have:
+                f.write(repo + "\n")
+
+
 def fit_scale_shift(pred, target, mask=None):
     """Least squares s and t minimising sum (s*pred + t - target)^2.
 
@@ -42,6 +56,7 @@ class MidasDepth:
             device = ("mps" if torch.backends.mps.is_available()
                       else "cuda" if torch.cuda.is_available() else "cpu")
         self.device = torch.device(device)
+        _trust_hub_repos()
         self.model = torch.hub.load("intel-isl/MiDaS", model_type, trust_repo=True)
         self.model.to(self.device).eval()
         tfs = torch.hub.load("intel-isl/MiDaS", "transforms", trust_repo=True)

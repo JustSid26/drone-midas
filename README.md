@@ -5,6 +5,18 @@ monocular obstacle-avoidance pipeline before any of it touches ROS 2, Gazebo, or
 
 Runs natively on Apple Silicon. No Unity, no Docker, no virtual machine.
 
+## Setup
+
+Python 3.11 or newer.
+
+    git clone https://github.com/JustSid26/drone-midas.git
+    cd drone-midas
+    python3 -m venv .venv
+    .venv/bin/pip install -r requirements.txt
+
+On Windows the interpreter is `.venv\Scripts\python` instead of `.venv/bin/python`
+in every command below.
+
 ## Run
 
     .venv/bin/python fly.py --seed 0
@@ -68,6 +80,39 @@ pocket with no representation in which "go around the far side" exists. That is 
 property of a purely reactive method, not a bug, and belongs in the failure
 analysis.
 
+## Running with MiDaS
+
+MiDaS-small estimates depth from the camera image alone, standing in for the
+perfect simulator depth. The first run downloads the model, about 100 MB, into
+`.torch/`, so it needs internet once. It runs on the Apple GPU (MPS), CUDA, or CPU,
+whichever is available.
+
+Fly on estimated depth instead of simulator truth:
+
+    .venv/bin/python fly.py --seed 0 --midas
+
+Controls are the same as above. The depth panel now shows the MiDaS estimate the
+aircraft is actually flying on. MiDaS gives depth only up to an unknown scale and
+offset, so both are fitted once against true depth and frozen. That fit is cached
+in `.midas_calib.json`. Add `--align oracle` to refit against true depth every
+frame instead: an upper bound, not something a real aircraft could do.
+
+Measure depth accuracy and speed on still frames, no flying:
+
+    .venv/bin/python bench_midas.py
+
+Prints AbsRel, RMSE and the delta < 1.25 accuracy for both alignments, plus
+milliseconds per frame on your device.
+
+Run the ablation, the result the project is after:
+
+    .venv/bin/python ablation.py --seeds 100-129 --obstacles 6
+
+Flies the same courses three times, on perfect depth, on MiDaS depth, and on no
+depth at all, and prints route completion, collision-free runs with a 95%
+interval, contacts and timeouts for each. MiDaS runs on every frame, so this is
+slow. Try `--seeds 100-104` first to check it works.
+
 ## Headless evaluation
 
     .venv/bin/python run_route.py --seeds 0-49 --stations 4
@@ -118,15 +163,16 @@ dynamics, rotor thrust, and hover-to-cruise transition come later from PX4 SITL.
     fly.py                 interactive sim, map panel, manual and auto flight
     policy.py              reactive avoidance policy and safety layers
     run_route.py           headless batch scoring over many seeds
+    midas_depth.py         MiDaS-small wrapper, scale and offset alignment, metrics
+    bench_midas.py         MiDaS depth accuracy and speed on sim frames
+    ablation.py            perfect vs MiDaS vs no depth on identical courses
     convert_cad.py         STEP to STL for the team's airframe parts
     cad/                   the team's STEP parts, copied out of WhatsApp temp
     meshes/vtol_shell.stl  the flying model
 
 ## Next
 
-1. Feed the camera panel to MiDaS and render its estimate beside the true depth,
-   then pass it to `run_route.run(depth_fn=...)` for the ablation.
-2. Tune the policy parameters with Optuna against `run_route`, which is what the
+1. Tune the policy parameters with Optuna against `run_route`, which is what the
    coursework asks for. The parameters are already constructor arguments.
-3. Log every run to MLflow: seed, contacts, time, minimum clearance.
-4. Move to PX4 SITL for real flight dynamics and the hover-to-cruise transition.
+2. Log every run to MLflow: seed, contacts, time, minimum clearance.
+3. Move to PX4 SITL for real flight dynamics and the hover-to-cruise transition.

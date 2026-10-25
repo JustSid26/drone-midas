@@ -1,6 +1,10 @@
 mujoco>=3.3
 numpy>=1.26
 opencv-python>=4.10
+# MiDaS depth estimation, needed by --midas, bench_midas.py and ablation.py
+torch>=2.2
+torchvision>=0.17
+timm>=0.9
 # CAD import, only needed by convert_cad.py
 trimesh>=4.4
 cascadio>=0.1.0

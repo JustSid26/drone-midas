@@ -1,0 +1,6 @@
+mujoco>=3.3
+numpy>=1.26
+opencv-python>=4.10
+# CAD import, only needed by convert_cad.py
+trimesh>=4.4
+cascadio>=0.1.0

@@ -37,10 +37,10 @@ def sample_stations(meta, n, rng):
 
 
 def run(seed, n_stations, obstacles, room, depth_fn=None, grid_pitch=2.5,
-        fovy=70, fallback='rotate', **policy_kw):
+        fovy=70, fallback='rotate', style="photo", **policy_kw):
     xml, meta = roommod.build(seed=seed, room=room, n_obstacles=obstacles,
                               grid_pitch=grid_pitch, fovy=fovy,
-                              cam_w=CAM_W, cam_h=CAM_H)
+                              cam_w=CAM_W, cam_h=CAM_H, style=style)
     model = mujoco.MjModel.from_xml_string(xml)
     data = mujoco.MjData(model)
     r = mujoco.Renderer(model, CAM_H, CAM_W)
@@ -121,6 +121,7 @@ def main():
     ap.add_argument("--stations", type=int, default=4)
     ap.add_argument("--obstacles", type=int, default=9)
     ap.add_argument("--room", type=float, default=10.0)
+    ap.add_argument("--style", choices=roommod.STYLES, default="photo")
     args = ap.parse_args()
 
     if "-" in args.seeds and "," not in args.seeds:
@@ -129,7 +130,7 @@ def main():
     else:
         seeds = [int(x) for x in args.seeds.split(",")]
 
-    rows = [run(s, args.stations, args.obstacles, args.room) for s in seeds]
+    rows = [run(s, args.stations, args.obstacles, args.room, style=args.style) for s in seeds]
     print(f"{'seed':>5}{'stations':>10}{'contacts':>10}{'time(s)':>9}{'min clear':>11}  result")
     for r in rows:
         ok = r["reached"] == r["total"] and r["collisions"] == 0

@@ -5,20 +5,26 @@ from midas_depth import MidasDepth, depth_metrics
 CAM_W, CAM_H, FOVY = 320, 240, 100
 
 
-def sample_frames(seeds, per_seed=6, rng_seed=0):
+def sample_frames(seeds, per_seed=6, rng_seed=0, style=None):
     rng = np.random.default_rng(rng_seed)
     rgbs, deps = [], []
     for sd in seeds:
         xml, meta = R.build(seed=sd, room=10.0, n_obstacles=9, fovy=FOVY,
-                            cam_w=CAM_W, cam_h=CAM_H)
+                            cam_w=CAM_W, cam_h=CAM_H, style=style)
         m = mujoco.MjModel.from_xml_string(xml)
         d = mujoco.MjData(m)
         r = mujoco.Renderer(m, CAM_H, CAM_W)
         half = meta["room"] / 2
         for _ in range(per_seed):
-            p = np.array([rng.uniform(-half + 1.5, half - 1.5),
-                          rng.uniform(-half + 1.5, half - 1.5), 1.2])
-            yaw = rng.uniform(-np.pi, np.pi)
+            # Redraw any pose inside or touching an obstacle: it would render the
+            # obstacle's interior, a view the aircraft can never have.
+            while True:
+                p = np.array([rng.uniform(-half + 1.5, half - 1.5),
+                              rng.uniform(-half + 1.5, half - 1.5), 1.2])
+                yaw = rng.uniform(-np.pi, np.pi)
+                if all(np.hypot(p[0] - o["x"], p[1] - o["y"]) > o["r"] + 0.45
+                       for o in meta["obstacles"]):
+                    break
             d.qpos[0:3] = p
             d.qpos[3:7] = [np.cos(yaw / 2), 0, 0, np.sin(yaw / 2)]
             d.qvel[:] = 0
@@ -31,9 +37,13 @@ def sample_frames(seeds, per_seed=6, rng_seed=0):
 
 
 if __name__ == "__main__":
-    print("sampling frames from the simulator ...", flush=True)
-    cal_rgb, cal_d = sample_frames(range(200, 206), per_seed=5, rng_seed=1)
-    ev_rgb, ev_d = sample_frames(range(210, 220), per_seed=6, rng_seed=2)
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--style", choices=R.STYLES, default="photo")
+    args = ap.parse_args()
+    print(f"sampling frames from the simulator, {args.style} style ...", flush=True)
+    cal_rgb, cal_d = sample_frames(range(200, 206), per_seed=5, rng_seed=1, style=args.style)
+    ev_rgb, ev_d = sample_frames(range(210, 220), per_seed=6, rng_seed=2, style=args.style)
     print(f"calibration frames {len(cal_rgb)}   evaluation frames {len(ev_rgb)}\n")
 
     md = MidasDepth()

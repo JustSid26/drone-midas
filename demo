@@ -1,0 +1,41 @@
+#!/bin/sh
+# Short commands for the live demo.
+#
+#   ./demo 1 [room]   perfect depth from the simulator (the target)
+#   ./demo 2 [room]   MiDaS, calibrated once (how the drone used it before)
+#   ./demo 3 [room]   MiDaS + 8x8 ToF sensor, re-fitted every frame
+#   ./demo rooms      the rooms tested for the demo
+#
+# room defaults to 103, an office. Each run flies a fixed route of five
+# waypoints by itself. Space replays it, q quits.
+
+cd "$(dirname "$0")" || exit 1
+room=${2:-103}
+
+case "$1" in
+  1) set -- ;;
+  2) set -- --midas ;;
+  3) set -- --midas --align tof ;;
+  rooms)
+    cat <<'EOF'
+Tested rooms (6 obstacles, 5 waypoints). Waypoints reached, time, contacts:
+
+  room  look       1 perfect         2 calibrated once   3 MiDaS + ToF
+  103   office     5/5  16 s   0     5/5 109 s  11       5/5  19 s   0
+  125   school     5/5  26 s   2     5/5 106 s   5       5/5  25 s   2
+  116   school     5/5  87 s   2     0/5 stuck           5/5  16 s   0
+  118   loft       5/5  57 s   0     1/5 stuck           5/5  22 s   4
+  101   home       5/5  28 s   1     0/5 stuck           5/5  50 s   8
+  120   loft       5/5  83 s   5     2/5 stuck           5/5  81 s   7
+  115   home       5/5  94 s   4     0/5 stuck           5/5 101 s   3
+  108   warehouse  5/5  73 s   4     5/5  64 s   3       5/5  80 s   0
+
+"stuck" means it was still circling after 2 minutes: press q.
+In 108 calibrating once happens to work; the other rooms show the problem.
+Any other number works too: each one is a different room.
+EOF
+    exit 0 ;;
+  *) sed -n '3,10p' "$0" | cut -c3-; exit 1 ;;
+esac
+
+exec .venv/bin/python fly.py --seed "$room" --obstacles 6 --demo "$@"

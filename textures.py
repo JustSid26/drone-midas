@@ -79,7 +79,63 @@ def generate():
     return made
 
 
+# Photographic textures ---------------------------------------------------------
+#
+# The procedural maps above are easy for a person to read as a room but sit far
+# outside what MiDaS was trained on. These are photographs of real surfaces from
+# Poly Haven (CC0, polyhaven.com), fetched once and committed under textures/photo.
+
+PHOTO_DIR = os.path.join(DIR, "photo")
+
+THEMES = {
+    "home":      dict(floor="laminate_floor_02", wall="beige_wall_001", ceiling="ceiling_interior"),
+    "office":    dict(floor="dirty_carpet", wall="white_plaster_02", ceiling="ceiling_interior"),
+    "warehouse": dict(floor="hangar_concrete_floor", wall="concrete_block_wall", ceiling="concrete_slab_wall"),
+    "loft":      dict(floor="plank_flooring", wall="whitewashed_brick", ceiling="white_plaster_02"),
+    "school":    dict(floor="tiled_floor_001", wall="painted_plaster_wall", ceiling="ceiling_interior"),
+}
+OBJECTS = ["kitchen_wood", "wood_cabinet_worn_long", "plywood", "fabric_pattern_07",
+           "brown_leather", "painted_concrete", "metal_plate", "leather_white"]
+
+
+def photo_ids():
+    ids = {v for t in THEMES.values() for v in t.values()} | set(OBJECTS)
+    return sorted(ids)
+
+
+def fetch_photo(size=512):
+    """Download each texture's 1k diffuse map, shrink it, and record how many
+    metres one tile covers so the room can repeat it at true scale."""
+    import json, urllib.request
+    os.makedirs(PHOTO_DIR, exist_ok=True)
+    api = "https://api.polyhaven.com"
+
+    def get(url):     # Poly Haven asks API users to identify themselves
+        req = urllib.request.Request(url, headers={"User-Agent": "drone-midas-sim/1.0"})
+        return urllib.request.urlopen(req, timeout=60).read()
+
+    info = json.loads(get(f"{api}/assets?t=textures"))
+    manifest = {}
+    for pid in photo_ids():
+        files = json.loads(get(f"{api}/files/{pid}"))
+        # A few fabrics come in colour variants instead of one diffuse map.
+        key = "Diffuse" if "Diffuse" in files else sorted(k for k in files if k.startswith("col"))[0]
+        url = files[key]["1k"]["jpg"]["url"]
+        raw = np.frombuffer(get(url), np.uint8)
+        img = cv2.imdecode(raw, cv2.IMREAD_COLOR)
+        cv2.imwrite(os.path.join(PHOTO_DIR, pid + ".png"), cv2.resize(img, (size, size),
+                    interpolation=cv2.INTER_AREA))
+        dims = info[pid].get("dimensions") or [2000, 2000]      # millimetres
+        manifest[pid] = dict(tile_m=[round(dims[0] / 1000, 3), round(dims[1] / 1000, 3)], source=f"https://polyhaven.com/a/{pid}",
+                             license="CC0")
+        print(f"{pid:26s} tile {manifest[pid]['tile_m']} m", flush=True)
+    json.dump(manifest, open(os.path.join(PHOTO_DIR, "manifest.json"), "w"), indent=1)
+
+
 if __name__ == "__main__":
-    m = generate()
-    for k, v in m.items():
-        print(f"{k:9s} {v}")
+    import sys
+    if "--photo" in sys.argv:
+        fetch_photo()
+    else:
+        for k, v in generate().items():
+            print(f"{k:9s} {v}")

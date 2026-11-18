@@ -254,14 +254,25 @@ def main():
     ap.add_argument("--snapshot-steps", type=int, default=400)
     ap.add_argument("--midas", action="store_true",
                     help="fly on depth estimated by MiDaS instead of simulator truth")
-    ap.add_argument("--align", choices=["frozen", "oracle"], default="frozen",
-                    help="frozen fits scale and offset once, oracle refits per frame")
-    ap.add_argument("--flat", action="store_true", help="untextured world")
+    ap.add_argument("--align", choices=["frozen", "tof", "oracle"], default="frozen",
+                    help="frozen fits scale and offset once; tof refits every frame against "
+                         "a simulated 8x8 zone range sensor; oracle refits against true depth")
+    ap.add_argument("--style", choices=roommod.STYLES, default="photo",
+                    help="photo: real surfaces, furniture, ceiling lights. procedural: the "
+                         "original generated textures. flat: untextured")
+    ap.add_argument("--flat", action="store_true", help="same as --style flat")
+    ap.add_argument("--demo", action="store_true",
+                    help="place the five stations a --snapshot run uses and start auto "
+                         "navigation at once, stepping time exactly as --snapshot does, so a "
+                         "live run repeats a route already tested headlessly. Space replays it")
+    ap.add_argument("--record", metavar="PATH",
+                    help="also write every frame to a 20 fps video, e.g. demo.mp4. Works "
+                         "headless with --snapshot, which makes clips without a window")
     args = ap.parse_args()
 
     xml, meta = roommod.build(seed=args.seed, room=args.room,
                               n_obstacles=args.obstacles, show_hull=args.show_hull,
-                              fovy=FOVY, textured=not args.flat,
+                              fovy=FOVY, style="flat" if args.flat else args.style,
                               cam_w=max(CAM_W, CHASE_W), cam_h=max(CAM_H, CHASE_H))
     model = mujoco.MjModel.from_xml_string(xml)
     data = mujoco.MjData(model)
@@ -278,7 +289,9 @@ def main():
         print("loading MiDaS ...", flush=True)
         md = MidasDepth()
         cache = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".midas_calib.json")
-        key = f"tex{int(not args.flat)}_fovy{FOVY}"
+        style = "flat" if args.flat else args.style
+        # Older keys kept so an existing cache still matches.
+        key = {"procedural": "tex1", "flat": "tex0"}.get(style, style) + f"_fovy{FOVY}"
         cal = json.load(open(cache)) if os.path.exists(cache) else {}
         if key in cal:
             md.scale, md.shift = cal[key]
@@ -286,7 +299,7 @@ def main():
         else:
             from bench_midas import sample_frames
             print("calibrating scale and offset, one time only ...", flush=True)
-            cr, cd = sample_frames(range(200, 206), per_seed=5, rng_seed=1)
+            cr, cd = sample_frames(range(200, 206), per_seed=5, rng_seed=1, style=style)
             md.calibrate(cr, cd)
             cal[key] = [md.scale, md.shift]
             json.dump(cal, open(cache, "w"))
@@ -330,7 +343,8 @@ def main():
 
     write_pose(st["pos"], st["yaw"])
     headless = bool(args.snapshot)
-    if headless:
+    fixed_step = headless or args.demo
+    if fixed_step:
         rng = np.random.default_rng(args.seed + 9973)
         half = args.room / 2
         placed = 0
@@ -341,15 +355,19 @@ def main():
                 placed += 1
         st["auto"] = True
         note[0] = "AUTO engaged"
-    else:
+    if not headless:
         cv2.namedWindow("VTOL course", cv2.WINDOW_AUTOSIZE)
         cv2.setMouseCallback("VTOL course", on_mouse)
     steps = 0
     last = time.time()
+    writer = None
 
     while True:
+        if args.demo and not headless:
+            # Fixed 50 ms steps, held to real time when the machine is faster.
+            time.sleep(max(0.0, 0.05 - (time.time() - last)))
         now = time.time()
-        dt = 0.05 if headless else min(now - last, 0.05)
+        dt = 0.05 if fixed_step else min(now - last, 0.05)
         last = now
         steps += 1
         st["t"] += dt
@@ -360,7 +378,8 @@ def main():
         fpv.enable_depth_rendering()
         fpv.update_scene(data, camera="fpv"); true_depth = fpv.render()
         if md is not None:
-            depth = md.metric_depth(rgb, true_depth, mode=args.align)
+            depth = md.metric_depth(rgb, true_depth, mode=args.align,
+                                    fy=CAM_H / 2 / np.tan(np.radians(FOVY) / 2))
             if steps % 10 == 0:
                 st["derr"] = depth_metrics(depth, true_depth)
         else:
@@ -542,6 +561,14 @@ def main():
         cv2.putText(frame, help_txt, (12, CHASE_H - 8), FONT, 0.44,
                     (185, 185, 195), 1, cv2.LINE_AA)
 
+        if args.record:
+            if writer is None:
+                size = (frame.shape[1], frame.shape[0])
+                writer = cv2.VideoWriter(args.record, cv2.VideoWriter_fourcc(*"avc1"), 20, size)
+                if not writer.isOpened():
+                    writer = cv2.VideoWriter(args.record, cv2.VideoWriter_fourcc(*"mp4v"), 20, size)
+            writer.write(frame)
+
         if headless:
             if steps >= args.snapshot_steps or st["done"]:
                 cv2.imwrite(args.snapshot, frame)
@@ -550,6 +577,9 @@ def main():
             continue
         cv2.imshow("VTOL course", frame)
 
+    if writer is not None:
+        writer.release()
+        print(f"wrote {args.record}")
     if not headless:
         cv2.destroyAllWindows()
     print(f"collisions {st['collisions']} | stations reached {st['idx']}/{len(stations)}")

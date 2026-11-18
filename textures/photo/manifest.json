@@ -1,0 +1,162 @@
+{
+ "beige_wall_001": {
+  "tile_m": [
+   3.0,
+   3.0
+  ],
+  "source": "https://polyhaven.com/a/beige_wall_001",
+  "license": "CC0"
+ },
+ "brown_leather": {
+  "tile_m": [
+   0.4,
+   0.4
+  ],
+  "source": "https://polyhaven.com/a/brown_leather",
+  "license": "CC0"
+ },
+ "ceiling_interior": {
+  "tile_m": [
+   2.0,
+   2.0
+  ],
+  "source": "https://polyhaven.com/a/ceiling_interior",
+  "license": "CC0"
+ },
+ "concrete_block_wall": {
+  "tile_m": [
+   2.0,
+   2.0
+  ],
+  "source": "https://polyhaven.com/a/concrete_block_wall",
+  "license": "CC0"
+ },
+ "concrete_slab_wall": {
+  "tile_m": [
+   2.3,
+   2.3
+  ],
+  "source": "https://polyhaven.com/a/concrete_slab_wall",
+  "license": "CC0"
+ },
+ "dirty_carpet": {
+  "tile_m": [
+   0.6,
+   0.6
+  ],
+  "source": "https://polyhaven.com/a/dirty_carpet",
+  "license": "CC0"
+ },
+ "fabric_pattern_07": {
+  "tile_m": [
+   0.4,
+   0.4
+  ],
+  "source": "https://polyhaven.com/a/fabric_pattern_07",
+  "license": "CC0"
+ },
+ "hangar_concrete_floor": {
+  "tile_m": [
+   2.0,
+   2.0
+  ],
+  "source": "https://polyhaven.com/a/hangar_concrete_floor",
+  "license": "CC0"
+ },
+ "kitchen_wood": {
+  "tile_m": [
+   0.6,
+   0.6
+  ],
+  "source": "https://polyhaven.com/a/kitchen_wood",
+  "license": "CC0"
+ },
+ "laminate_floor_02": {
+  "tile_m": [
+   1.7,
+   1.7
+  ],
+  "source": "https://polyhaven.com/a/laminate_floor_02",
+  "license": "CC0"
+ },
+ "leather_white": {
+  "tile_m": [
+   0.3,
+   0.3
+  ],
+  "source": "https://polyhaven.com/a/leather_white",
+  "license": "CC0"
+ },
+ "metal_plate": {
+  "tile_m": [
+   0.5,
+   0.5
+  ],
+  "source": "https://polyhaven.com/a/metal_plate",
+  "license": "CC0"
+ },
+ "painted_concrete": {
+  "tile_m": [
+   2.0,
+   2.0
+  ],
+  "source": "https://polyhaven.com/a/painted_concrete",
+  "license": "CC0"
+ },
+ "painted_plaster_wall": {
+  "tile_m": [
+   2.0,
+   2.0
+  ],
+  "source": "https://polyhaven.com/a/painted_plaster_wall",
+  "license": "CC0"
+ },
+ "plank_flooring": {
+  "tile_m": [
+   1.34,
+   1.34
+  ],
+  "source": "https://polyhaven.com/a/plank_flooring",
+  "license": "CC0"
+ },
+ "plywood": {
+  "tile_m": [
+   0.5,
+   0.5
+  ],
+  "source": "https://polyhaven.com/a/plywood",
+  "license": "CC0"
+ },
+ "tiled_floor_001": {
+  "tile_m": [
+   1.5,
+   1.5
+  ],
+  "source": "https://polyhaven.com/a/tiled_floor_001",
+  "license": "CC0"
+ },
+ "white_plaster_02": {
+  "tile_m": [
+   1.0,
+   1.0
+  ],
+  "source": "https://polyhaven.com/a/white_plaster_02",
+  "license": "CC0"
+ },
+ "whitewashed_brick": {
+  "tile_m": [
+   2.0,
+   2.0
+  ],
+  "source": "https://polyhaven.com/a/whitewashed_brick",
+  "license": "CC0"
+ },
+ "wood_cabinet_worn_long": {
+  "tile_m": [
+   1.0,
+   0.5
+  ],
+  "source": "https://polyhaven.com/a/wood_cabinet_worn_long",
+  "license": "CC0"
+ }
+}

@@ -5,6 +5,10 @@ opencv-python>=4.10
 torch>=2.2
 torchvision>=0.17
 timm>=0.9
+# Real indoor data evaluation (eval_real.py, indoor_data.py) and Depth Anything V2
+transformers>=4.45
+h5py>=3.10
+scipy>=1.11
 # CAD import, only needed by convert_cad.py
 trimesh>=4.4
 cascadio>=0.1.0
